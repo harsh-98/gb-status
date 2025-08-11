@@ -1,0 +1,582 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gearbox Protocol Status</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 40px;
+            color: white;
+        }
+
+        .header h1 {
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+        }
+
+        .header p {
+            font-size: 1.2rem;
+            opacity: 0.9;
+        }
+
+        .last-updated {
+            text-align: center;
+            color: white;
+            margin-bottom: 30px;
+            opacity: 0.8;
+        }
+
+        .network-section {
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 15px;
+            padding: 25px;
+            margin-bottom: 25px;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.1);
+            backdrop-filter: blur(10px);
+        }
+
+        .network-title {
+            font-size: 1.8rem;
+            color: #333;
+            margin-bottom: 20px;
+            text-transform: capitalize;
+            border-bottom: 3px solid #667eea;
+            padding-bottom: 10px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .network-icon {
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            background: #667eea;
+        }
+
+        .services-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 15px;
+        }
+
+        .service-card {
+            background: white;
+            border-radius: 10px;
+            padding: 20px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            transition: all 0.3s ease;
+            border-left: 4px solid transparent;
+        }
+
+        .service-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 15px rgba(0,0,0,0.15);
+        }
+
+        .service-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+
+        .service-name {
+            font-size: 1.2rem;
+            font-weight: 600;
+            color: #333;
+            text-transform: capitalize;
+        }
+
+        .status-indicator {
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            position: relative;
+            transition: all 0.3s ease;
+        }
+
+        .status-online {
+            background: #10b981;
+            box-shadow: 0 0 10px rgba(16, 185, 129, 0.5);
+            animation: pulse-green 2s infinite;
+        }
+
+        .status-offline {
+            background: #ef4444;
+            box-shadow: 0 0 10px rgba(239, 68, 68, 0.5);
+            animation: pulse-red 2s infinite;
+        }
+
+        .status-checking {
+            background: #f59e0b;
+            box-shadow: 0 0 10px rgba(245, 158, 11, 0.5);
+            animation: pulse-yellow 1s infinite;
+        }
+
+        @keyframes pulse-green {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.7; }
+        }
+
+        @keyframes pulse-red {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.7; }
+        }
+
+        @keyframes pulse-yellow {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+
+        .service-card.online {
+            border-left-color: #10b981;
+        }
+
+        .service-card.offline {
+            border-left-color: #ef4444;
+        }
+
+        .service-card.checking {
+            border-left-color: #f59e0b;
+        }
+
+        .endpoints-list {
+            list-style: none;
+        }
+
+        .endpoint-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 8px 0;
+            border-bottom: 1px solid #f3f4f6;
+        }
+
+        .endpoint-item:last-child {
+            border-bottom: none;
+        }
+
+        .endpoint-url {
+            font-family: 'Courier New', monospace;
+            font-size: 0.9rem;
+            color: #6b7280;
+            text-decoration: none;
+            word-break: break-all;
+            max-width: 70%;
+        }
+
+        .endpoint-url:hover {
+            color: #667eea;
+        }
+
+        .endpoint-status {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            flex-shrink: 0;
+        }
+
+        .refresh-button {
+            position: fixed;
+            bottom: 30px;
+            right: 30px;
+            background: #667eea;
+            color: white;
+            border: none;
+            border-radius: 50%;
+            width: 60px;
+            height: 60px;
+            font-size: 1.5rem;
+            cursor: pointer;
+            box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
+            transition: all 0.3s ease;
+        }
+
+        .refresh-button:hover {
+            background: #5a67d8;
+            transform: scale(1.1);
+        }
+
+        .refresh-button:active {
+            transform: scale(0.95);
+        }
+
+        .refresh-button.spinning {
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+
+        .loading {
+            text-align: center;
+            color: white;
+            font-size: 1.2rem;
+            margin: 50px 0;
+        }
+
+        .error-message {
+            background: rgba(239, 68, 68, 0.1);
+            border: 1px solid #ef4444;
+            color: #dc2626;
+            padding: 15px;
+            border-radius: 10px;
+            margin: 20px 0;
+            text-align: center;
+        }
+
+        .summary {
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 15px;
+            padding: 20px;
+            margin-bottom: 25px;
+            text-align: center;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.1);
+        }
+
+        .summary-stats {
+            display: flex;
+            justify-content: space-around;
+            flex-wrap: wrap;
+            gap: 20px;
+        }
+
+        .stat-item {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .stat-number {
+            font-size: 2rem;
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+
+        .stat-label {
+            color: #6b7280;
+            font-size: 0.9rem;
+        }
+
+        .stat-online { color: #10b981; }
+        .stat-offline { color: #ef4444; }
+        .stat-total { color: #667eea; }
+
+        @media (max-width: 768px) {
+            .services-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .header h1 {
+                font-size: 2rem;
+            }
+            
+            .summary-stats {
+                flex-direction: column;
+                gap: 15px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🔧 Gearbox Protocol Status</h1>
+            <p>Real-time monitoring of all Gearbox Protocol services</p>
+        </div>
+
+        <div class="last-updated" id="lastUpdated">
+            Last updated: Never
+        </div>
+
+        <div class="summary" id="summary" style="display: none;">
+            <h2 style="margin-bottom: 15px; color: #333;">Service Overview</h2>
+            <div class="summary-stats">
+                <div class="stat-item">
+                    <div class="stat-number stat-online" id="onlineCount">0</div>
+                    <div class="stat-label">Online</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-number stat-offline" id="offlineCount">0</div>
+                    <div class="stat-label">Offline</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-number stat-total" id="totalCount">0</div>
+                    <div class="stat-label">Total Services</div>
+                </div>
+            </div>
+        </div>
+
+        <div id="loading" class="loading">
+            <div>🔄 Loading service status...</div>
+        </div>
+
+        <div id="content"></div>
+
+        <div id="error" class="error-message" style="display: none;"></div>
+    </div>
+
+    <button class="refresh-button" id="refreshButton" onclick="checkAllServices()" title="Refresh Status">
+        🔄
+    </button>
+
+    <script>
+        let config = null;
+        let checkInterval = null;
+
+        // Network icons mapping
+        const networkIcons = {
+            mainnet: '🔷',
+            arbitrum: '🔵',
+            optimism: '🔴',
+            sonic: '🟡',
+            bnb: '🟠',
+            lisk: '🟢'
+        };
+
+        async function loadConfig() {
+            try {
+                const response = await fetch('config.json');
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                config = await response.json();
+                return config;
+            } catch (error) {
+                console.error('Error loading config:', error);
+                showError('Failed to load configuration. Please check if config.json exists.');
+                return null;
+            }
+        }
+
+        async function checkUrl(url) {
+            try {
+                // For CORS issues, we'll use a simple approach
+                // In production, you might want to use a CORS proxy or backend service
+                const controller = new AbortController();
+                const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
+
+                const response = await fetch(url, {
+                    method: 'HEAD',
+                    mode: 'no-cors', // This will limit what we can check, but avoids CORS
+                    signal: controller.signal
+                });
+                
+                clearTimeout(timeoutId);
+                return true; // If no error is thrown, consider it online
+            } catch (error) {
+                // For no-cors mode, we can't really tell the difference between
+                // a successful request and a failed one, so we'll do a simple fetch
+                try {
+                    const response = await fetch(url, {
+                        method: 'GET',
+                        mode: 'no-cors'
+                    });
+                    return true;
+                } catch (e) {
+                    console.error(`Error checking ${url}:`, error);
+                    return false;
+                }
+            }
+        }
+
+        async function checkServiceUrls(urls) {
+            const results = await Promise.all(
+                urls.map(async (url) => {
+                    // Remove any additional parameters after comma
+                    const cleanUrl = url.split(',')[0];
+                    const isOnline = await checkUrl(cleanUrl);
+                    return { url: cleanUrl, online: isOnline };
+                })
+            );
+            
+            // Service is considered online if at least one URL is reachable
+            const serviceOnline = results.some(result => result.online);
+            return { online: serviceOnline, endpoints: results };
+        }
+
+        function createServiceCard(serviceName, urls, networkName) {
+            const card = document.createElement('div');
+            card.className = 'service-card checking';
+            card.id = `service-${networkName}-${serviceName}`;
+            
+            card.innerHTML = `
+                <div class="service-header">
+                    <div class="service-name">${serviceName.replace(/_/g, ' ')}</div>
+                    <div class="status-indicator checking" id="status-${networkName}-${serviceName}"></div>
+                </div>
+                <ul class="endpoints-list" id="endpoints-${networkName}-${serviceName}">
+                    ${urls.map(url => `
+                        <li class="endpoint-item">
+                            <a href="${url.split(',')[0]}" target="_blank" class="endpoint-url">${url.split(',')[0]}</a>
+                            <div class="endpoint-status checking"></div>
+                        </li>
+                    `).join('')}
+                </ul>
+            `;
+            
+            return card;
+        }
+
+        function updateServiceStatus(networkName, serviceName, result) {
+            const card = document.getElementById(`service-${networkName}-${serviceName}`);
+            const statusIndicator = document.getElementById(`status-${networkName}-${serviceName}`);
+            const endpointsList = document.getElementById(`endpoints-${networkName}-${serviceName}`);
+            
+            if (!card || !statusIndicator || !endpointsList) return;
+
+            // Update main status
+            const statusClass = result.online ? 'online' : 'offline';
+            card.className = `service-card ${statusClass}`;
+            statusIndicator.className = `status-indicator status-${statusClass === 'online' ? 'online' : 'offline'}`;
+            
+            // Update individual endpoint statuses
+            const endpointItems = endpointsList.querySelectorAll('.endpoint-status');
+            result.endpoints.forEach((endpoint, index) => {
+                if (endpointItems[index]) {
+                    endpointItems[index].className = `endpoint-status status-${endpoint.online ? 'online' : 'offline'}`;
+                }
+            });
+        }
+
+        function renderNetworks() {
+            const content = document.getElementById('content');
+            content.innerHTML = '';
+            
+            if (!config || !config['1']) {
+                showError('No configuration data available');
+                return;
+            }
+
+            const networks = config['1'];
+            
+            for (const [networkName, services] of Object.entries(networks)) {
+                const section = document.createElement('div');
+                section.className = 'network-section';
+                
+                const title = document.createElement('h2');
+                title.className = 'network-title';
+                title.innerHTML = `
+                    <span class="network-icon">${networkIcons[networkName] || '🌐'}</span>
+                    ${networkName}
+                `;
+                
+                const grid = document.createElement('div');
+                grid.className = 'services-grid';
+                
+                for (const [serviceName, urls] of Object.entries(services)) {
+                    const card = createServiceCard(serviceName, urls, networkName);
+                    grid.appendChild(card);
+                }
+                
+                section.appendChild(title);
+                section.appendChild(grid);
+                content.appendChild(section);
+            }
+        }
+
+        async function checkAllServices() {
+            if (!config || !config['1']) return;
+
+            const refreshButton = document.getElementById('refreshButton');
+            refreshButton.classList.add('spinning');
+
+            let totalServices = 0;
+            let onlineServices = 0;
+
+            const networks = config['1'];
+            
+            for (const [networkName, services] of Object.entries(networks)) {
+                for (const [serviceName, urls] of Object.entries(services)) {
+                    totalServices++;
+                    
+                    try {
+                        const result = await checkServiceUrls(urls);
+                        updateServiceStatus(networkName, serviceName, result);
+                        
+                        if (result.online) {
+                            onlineServices++;
+                        }
+                    } catch (error) {
+                        console.error(`Error checking ${networkName}-${serviceName}:`, error);
+                        updateServiceStatus(networkName, serviceName, { online: false, endpoints: [] });
+                    }
+                }
+            }
+
+            updateSummary(onlineServices, totalServices - onlineServices, totalServices);
+            updateLastUpdated();
+            
+            refreshButton.classList.remove('spinning');
+        }
+
+        function updateSummary(online, offline, total) {
+            document.getElementById('onlineCount').textContent = online;
+            document.getElementById('offlineCount').textContent = offline;
+            document.getElementById('totalCount').textContent = total;
+            document.getElementById('summary').style.display = 'block';
+        }
+
+        function updateLastUpdated() {
+            const now = new Date();
+            document.getElementById('lastUpdated').textContent = 
+                `Last updated: ${now.toLocaleString()}`;
+        }
+
+        function showError(message) {
+            const errorDiv = document.getElementById('error');
+            errorDiv.textContent = message;
+            errorDiv.style.display = 'block';
+        }
+
+        function hideLoading() {
+            document.getElementById('loading').style.display = 'none';
+        }
+
+        async function init() {
+            try {
+                await loadConfig();
+                if (config) {
+                    renderNetworks();
+                    hideLoading();
+                    await checkAllServices();
+                    
+                    // Set up auto-refresh every 5 minutes
+                    checkInterval = setInterval(checkAllServices, 5 * 60 * 1000);
+                }
+            } catch (error) {
+                console.error('Initialization error:', error);
+                showError('Failed to initialize the status page');
+                hideLoading();
+            }
+        }
+
+        // Start the application
+        init();
+    </script>
+</body>
+</html>
