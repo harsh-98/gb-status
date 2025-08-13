@@ -135,6 +135,12 @@
             animation: pulse-yellow 1s infinite;
         }
 
+        .status-timeout {
+            background: #f97316;
+            box-shadow: 0 0 10px rgba(249, 115, 22, 0.5);
+            animation: pulse-orange 2s infinite;
+        }
+
         @keyframes pulse-green {
             0%, 100% { opacity: 1; }
             50% { opacity: 0.7; }
@@ -150,6 +156,11 @@
             50% { opacity: 0.5; }
         }
 
+        @keyframes pulse-orange {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.6; }
+        }
+
         .service-card.online {
             border-left-color: #10b981;
         }
@@ -160,6 +171,10 @@
 
         .service-card.checking {
             border-left-color: #f59e0b;
+        }
+
+        .service-card.timeout {
+            border-left-color: #f97316;
         }
 
         .endpoints-list {
@@ -284,6 +299,7 @@
 
         .stat-online { color: #10b981; }
         .stat-offline { color: #ef4444; }
+        .stat-timeout { color: #f97316; }
         .stat-total { color: #667eea; }
 
         @media (max-width: 768px) {
@@ -323,6 +339,10 @@
                 <div class="stat-item">
                     <div class="stat-number stat-offline" id="offlineCount">0</div>
                     <div class="stat-label">Offline</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-number stat-timeout" id="timeoutCount">0</div>
+                    <div class="stat-label">Timeout</div>
                 </div>
                 <div class="stat-item">
                     <div class="stat-number stat-total" id="totalCount">0</div>
@@ -378,7 +398,7 @@
                 // For CORS issues, we'll use a simple approach
                 // In production, you might want to use a CORS proxy or backend service
                 const controller = new AbortController();
-                const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
+                const timeoutId = setTimeout(() => controller.abort(), 2000); // 2 second timeout
 
                 const response = await fetch(url, {
                     method: 'HEAD',
@@ -387,19 +407,34 @@
                 });
                 
                 clearTimeout(timeoutId);
-                return true; // If no error is thrown, consider it online
+                return { status: 'online', online: true }; // If no error is thrown, consider it online
             } catch (error) {
+                if (error.name === 'AbortError') {
+                    console.error(`Timeout checking ${url}:`, error);
+                    return { status: 'timeout', online: false };
+                }
+                
                 // For no-cors mode, we can't really tell the difference between
                 // a successful request and a failed one, so we'll do a simple fetch
                 try {
+                    const controller2 = new AbortController();
+                    const timeoutId2 = setTimeout(() => controller2.abort(), 2000); // 2 second timeout
+                    
                     const response = await fetch(url, {
                         method: 'GET',
-                        mode: 'no-cors'
+                        mode: 'no-cors',
+                        signal: controller2.signal
                     });
-                    return true;
+                    
+                    clearTimeout(timeoutId2);
+                    return { status: 'online', online: true };
                 } catch (e) {
+                    if (e.name === 'AbortError') {
+                        console.error(`Timeout checking ${url}:`, e);
+                        return { status: 'timeout', online: false };
+                    }
                     console.error(`Error checking ${url}:`, error);
-                    return false;
+                    return { status: 'offline', online: false };
                 }
             }
         }
@@ -409,14 +444,17 @@
                 urls.map(async (url) => {
                     // Remove any additional parameters after comma
                     const cleanUrl = url.split(',')[0];
-                    const isOnline = await checkUrl(cleanUrl);
-                    return { url: cleanUrl, online: isOnline };
+                    const result = await checkUrl(cleanUrl);
+                    return { url: cleanUrl, online: result.online, status: result.status };
                 })
             );
             
             // Service is considered online if at least one URL is reachable
             const serviceOnline = results.some(result => result.online);
-            return { online: serviceOnline, endpoints: results };
+            const hasTimeout = results.some(result => result.status === 'timeout');
+            const serviceStatus = serviceOnline ? 'online' : (hasTimeout && !serviceOnline ? 'timeout' : 'offline');
+            
+            return { online: serviceOnline, status: serviceStatus, endpoints: results };
         }
 
         function createServiceCard(serviceName, urls, networkName) {
@@ -450,15 +488,16 @@
             if (!card || !statusIndicator || !endpointsList) return;
 
             // Update main status
-            const statusClass = result.online ? 'online' : 'offline';
+            const statusClass = result.status || (result.online ? 'online' : 'offline');
             card.className = `service-card ${statusClass}`;
-            statusIndicator.className = `status-indicator status-${statusClass === 'online' ? 'online' : 'offline'}`;
+            statusIndicator.className = `status-indicator status-${statusClass}`;
             
             // Update individual endpoint statuses
             const endpointItems = endpointsList.querySelectorAll('.endpoint-status');
             result.endpoints.forEach((endpoint, index) => {
                 if (endpointItems[index]) {
-                    endpointItems[index].className = `endpoint-status status-${endpoint.online ? 'online' : 'offline'}`;
+                    const endpointStatus = endpoint.status || (endpoint.online ? 'online' : 'offline');
+                    endpointItems[index].className = `endpoint-status status-${endpointStatus}`;
                 }
             });
         }
@@ -507,6 +546,7 @@
 
             let totalServices = 0;
             let onlineServices = 0;
+            let timeoutServices = 0;
 
             const networks = config['1'];
             
@@ -520,23 +560,27 @@
                         
                         if (result.online) {
                             onlineServices++;
+                        } else if (result.status === 'timeout') {
+                            timeoutServices++;
                         }
                     } catch (error) {
                         console.error(`Error checking ${networkName}-${serviceName}:`, error);
-                        updateServiceStatus(networkName, serviceName, { online: false, endpoints: [] });
+                        updateServiceStatus(networkName, serviceName, { online: false, status: 'offline', endpoints: [] });
                     }
                 }
             }
 
-            updateSummary(onlineServices, totalServices - onlineServices, totalServices);
+            const offlineServices = totalServices - onlineServices - timeoutServices;
+            updateSummary(onlineServices, offlineServices, totalServices, timeoutServices);
             updateLastUpdated();
             
             refreshButton.classList.remove('spinning');
         }
 
-        function updateSummary(online, offline, total) {
+        function updateSummary(online, offline, total, timeout = 0) {
             document.getElementById('onlineCount').textContent = online;
             document.getElementById('offlineCount').textContent = offline;
+            document.getElementById('timeoutCount').textContent = timeout;
             document.getElementById('totalCount').textContent = total;
             document.getElementById('summary').style.display = 'block';
         }

@@ -1,73 +1,81 @@
 {
-  "1": {
-    "mainnet": {
-      "third-eye": [
-        "https://testnet.gearbox.foundation/mainnet/metrics"
-      ],
-      "liquidator-v3": [
-        "https://liquidator-v3.fly.dev/metrics"
-      ],
-      "apy-server": [
-        "https://apy-server.fly.dev/api/health"
-      ],
-      "charts_server": [
-        "https://charts-server.fly.dev/health",
-        "https://charts-server.fly.dev/api/sync"
-      ],
-      "redstone_server": [
-        "https://testnet.gearbox.foundation/redstone/redstone-primary-prod/1?dataFeeds=weETH_FUNDAMENTAL"
-      ],
-      "arb_redstone_server": [
-        "http://144.91.114.166:12500/redstone-primary-prod/1?dataFeeds=weETH_FUNDAMENTAL"
-      ],
-      "opt_redstone_server": [
-        "http://37.60.225.176:12501/redstone-primary-prod/1?dataFeeds=weETH_FUNDAMENTAL"
-      ]
-    },
-    "arbitrum": {
-      "third-eye": [
-        "http://144.91.114.166:19000/metrics"
-      ],
-      "charts_server": [
-        "https://arbitrum-charts-server.fly.dev/health",
-        "https://arbitrum-charts-server.fly.dev/api/sync"
-      ]
-    },
-    "optimism": {
-      "third-eye": [
-        "https://optimism.gearbox.foundation/metrics"
-      ],
-      "charts_server": [
-        "https://optimism-charts-server.fly.dev/health",
-        "https://optimism-charts-server.fly.dev/api/sync"
-      ]
-    },
-    "sonic": {
-      "third-eye": [
-        "http://144.91.114.166:39000/metrics"
-      ],
-      "charts_server": [
-        "http://sonic-charts-server.fly.dev/health",
-        "http://sonic-charts-server.fly.dev/api/sync"
-      ]
-    },
-    "bnb": {
-      "third-eye": [
-        "http://144.91.114.166:49000/metrics"
-      ],
-      "charts_server": [
-        "http://bnb-charts-server.fly.dev/health",
-        "http://bnb-charts-server.fly.dev/api/sync"
-      ]
-    },
-    "lisk": {
-      "third-eye": [
-        "http://144.91.114.166:59000/metrics"
-      ],
-      "charts_server": [
-        "http://lisk-charts-server.fly.dev/health",
-        "http://lisk-charts-server.fly.dev/api/sync"
-      ]
-    }
-  }
+   "1": {
+      "arbitrum": {
+         "charts_server": [
+            "https://arbitrum-charts-server.fly.dev/health",
+            "https://arbitrum-charts-server.fly.dev/api/sync,parse"
+         ],
+         "third-eye": [
+            "http://144.91.114.166:19000/metrics,prometheus"
+         ]
+      },
+      "bnb": {
+         "charts_server": [
+            "http://bnb-charts-server.fly.dev/health",
+            "http://bnb-charts-server.fly.dev/api/sync,parse"
+         ],
+         "third-eye": [
+            "http://144.91.114.166:49000/metrics,prometheus"
+         ]
+      },
+      "hemibtc": {
+         "charts_server": [
+            "http://hemibtc-charts-server.fly.dev/health",
+            "http://hemibtc-charts-server.fly.dev/api/sync"
+         ],
+         "third-eye": [ ]
+      },
+      "lisk": {
+         "charts_server": [
+            "http://lisk-charts-server.fly.dev/health",
+            "http://lisk-charts-server.fly.dev/api/sync,parse"
+         ],
+         "third-eye": [
+            "http://144.91.114.166:49000/metrics,prometheus"
+         ]
+      },
+      "mainnet": {
+         "apy-server": [
+            "https://apy-server.fly.dev/api/health"
+         ],
+         "arb_redstone_server": [
+            "http://144.91.114.166:12500/redstone-primary-prod/1?dataFeeds=weETH_FUNDAMENTAL"
+         ],
+         "charts_server": [
+            "https://charts-server.fly.dev/health",
+            "https://charts-server.fly.dev/api/sync,parse"
+         ],
+         "liquidator-v3": [
+            "https://liquidator-v3.fly.dev/metrics,prometheus"
+         ],
+         "opt_redstone_server": [
+            "http://37.60.225.176:12501/redstone-primary-prod/1?dataFeeds=weETH_FUNDAMENTAL"
+         ],
+         "redstone_server": [
+            "https://testnet.gearbox.foundation/redstone/redstone-primary-prod/1?dataFeeds=weETH_FUNDAMENTAL"
+         ],
+         "third-eye": [
+            "https://testnet.gearbox.foundation/mainnet/metrics,prometheus"
+         ]
+      },
+      "opitmism": {
+         "charts_server": [
+            "https://optimism-charts-server.fly.dev/health",
+            "https://optimism-charts-server.fly.dev/api/sync,parse"
+         ],
+         "third-eye": [
+            "https://optimism.gearbox.foundation/metrics,prometheus"
+         ]
+      },
+      "sonic": {
+         "charts_server": [
+            "http://sonic-charts-server.fly.dev/health",
+            "http://sonic-charts-server.fly.dev/api/sync,parse"
+         ],
+         "third-eye": [
+            "http://144.91.114.166:39000/metrics,prometheus"
+         ]
+      }
+   },
+   "7878": { }
 }
