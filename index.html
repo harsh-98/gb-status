@@ -333,6 +333,91 @@
             box-shadow: 0 8px 32px rgba(0,0,0,0.1);
         }
 
+        .data-freshness-summary {
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 15px;
+            padding: 20px;
+            margin-bottom: 25px;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.1);
+        }
+
+        .freshness-list {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 15px;
+        }
+
+        .freshness-item {
+            background: white;
+            border-radius: 10px;
+            padding: 15px;
+            border-left: 4px solid transparent;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        .freshness-item.fresh {
+            border-left-color: #10b981;
+        }
+
+        .freshness-item.stale {
+            border-left-color: #eab308;
+        }
+
+        .freshness-item.very-stale {
+            border-left-color: #f97316;
+        }
+
+        .freshness-item.outdated {
+            border-left-color: #dc2626;
+        }
+
+        .freshness-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 8px;
+        }
+
+        .freshness-service {
+            font-weight: 600;
+            color: #333;
+        }
+
+        .freshness-age {
+            font-size: 0.9rem;
+            padding: 4px 8px;
+            border-radius: 12px;
+            color: white;
+            font-weight: 500;
+        }
+
+        .freshness-age.fresh {
+            background: #10b981;
+        }
+
+        .freshness-age.stale {
+            background: #eab308;
+        }
+
+        .freshness-age.very-stale {
+            background: #f97316;
+        }
+
+        .freshness-age.outdated {
+            background: #dc2626;
+        }
+
+        .freshness-details {
+            font-size: 0.85rem;
+            color: #6b7280;
+        }
+
+        .freshness-timestamp {
+            margin-top: 5px;
+            font-size: 0.8rem;
+            color: #9ca3af;
+        }
+
         .summary-stats {
             display: flex;
             justify-content: space-around;
@@ -421,6 +506,11 @@
             </div>
         </div>
 
+        <div class="data-freshness-summary" id="dataFreshnessSummary" style="display: none;">
+            <h2 style="margin-bottom: 15px; color: #333;">Data Freshness Report</h2>
+            <div id="freshnessList" class="freshness-list"></div>
+        </div>
+
         <div id="loading" class="loading">
             <div>🔄 Loading service status...</div>
         </div>
@@ -465,64 +555,42 @@
 
         async function checkUrl(url) {
             try {
-                // Handle mixed content issues by upgrading HTTP to HTTPS when the page is served over HTTPS
-                let targetUrl = url;
-                if (location.protocol === 'https:' && url.startsWith('http:')) {
-                    // Try HTTPS version first for mixed content compatibility
-                    targetUrl = url.replace('http:', 'https:');
-                    
-                    try {
-                        const controller = new AbortController();
-                        const timeoutId = setTimeout(() => controller.abort(), 2000);
-                        
-                        const response = await fetch(targetUrl, {
-                            method: 'GET',
-                            mode: 'cors',
-                            signal: controller.signal
-                        });
-                        
-                        clearTimeout(timeoutId);
-                        
-                        // Try to parse response for timestamp data
-                        const result = await parseResponseData(response, targetUrl);
-                        return result;
-                    } catch (httpsError) {
-                        if (httpsError.name === 'AbortError') {
-                            return { status: 'timeout', online: false };
-                        }
-                        // HTTPS failed, but don't try HTTP due to mixed content - mark as blocked
-                        console.error(`Mixed content blocked for ${url} (HTTPS upgrade failed):`, httpsError);
-                        return { status: 'blocked', online: false };
-                    }
-                }
-                
-                // For HTTPS URLs or when page is served over HTTP
-                const controller = new AbortController();
-                const timeoutId = setTimeout(() => controller.abort(), 2000);
+                // Extract the actual URL and any operation indicators
+                const urlParts = url.split(',');
+                const actualUrl = urlParts[0];
+                const operation = urlParts[1] || '';
 
-                const response = await fetch(targetUrl, {
-                    method: 'GET',
-                    mode: 'cors',
-                    signal: controller.signal
-                });
-                
-                clearTimeout(timeoutId);
-                
-                // Try to parse response for timestamp data
-                const result = await parseResponseData(response, targetUrl);
-                return result;
+                // Try HTTPS first with timeout
+                const response = await Promise.race([
+                    fetch(actualUrl, { mode: 'cors' }),
+                    new Promise((_, reject) => setTimeout(() => reject(new Error('timeout')), 2000))
+                ]);
+
+                if (response.ok) {
+                    return await parseResponseData(response, operation);
+                } else {
+                    // Try with no-cors mode if CORS fails
+                    const noCorsResponse = await Promise.race([
+                        fetch(actualUrl, { mode: 'no-cors' }),
+                        new Promise((_, reject) => setTimeout(() => reject(new Error('timeout')), 2000))
+                    ]);
+                    
+                    if (noCorsResponse.type === 'opaque') {
+                        // For opaque responses, we can't access the data, but the request succeeded
+                        return { status: 'online', online: true };
+                    }
+                    return { status: 'offline', online: false };
+                }
             } catch (error) {
-                if (error.name === 'AbortError') {
-                    console.error(`Timeout checking ${url}:`, error);
+                if (error.message === 'timeout') {
                     return { status: 'timeout', online: false };
                 }
-                
-                console.error(`Error checking ${url}:`, error);
-                return { status: 'offline', online: false };
+                console.log(`Network error for ${url}:`, error);
+                return { status: 'blocked:mixed-content', online: false };
             }
         }
 
-        async function parseResponseData(response, url) {
+        async function parseResponseData(response, operation) {
             const currentTime = Math.floor(Date.now() / 1000);
             
             try {
@@ -530,10 +598,8 @@
                 let timestamp = null;
                 let dataAge = null;
                 
-                // Check if URL has parse or prometheus indicators
-                const urlParams = url.split(',')[1] || '';
-                
-                if (urlParams.includes('parse')) {
+                // Use the operation indicator to determine how to parse the response
+                if (operation.includes('parse')) {
                     // Try to parse JSON response for "parse" endpoints
                     try {
                         const data = JSON.parse(text);
@@ -543,7 +609,7 @@
                     } catch (e) {
                         // Not valid JSON, continue
                     }
-                } else if (urlParams.includes('prometheus')) {
+                } else if (operation.includes('prometheus')) {
                     // Parse prometheus format for timestamp
                     const match = text.match(/eth_block_number_time\s+([\d.e\+]+)/);
                     if (match) {
@@ -577,15 +643,69 @@
         function formatDataAge(seconds) {
             if (!seconds) return '';
             
-            if (seconds < 60) {
-                return `${Math.floor(seconds)}s ago`;
-            } else if (seconds < 3600) {
-                return `${Math.floor(seconds / 60)}m ago`;
-            } else if (seconds < 86400) {
-                return `${Math.floor(seconds / 3600)}h ago`;
+            const days = Math.floor(seconds / 86400);
+            const hours = Math.floor((seconds % 86400) / 3600);
+            const minutes = Math.floor((seconds % 3600) / 60);
+            const secs = Math.floor(seconds % 60);
+            
+            if (days > 0) {
+                return `${days}d ${hours}h ${minutes}m behind`;
+            } else if (hours > 0) {
+                return `${hours}h ${minutes}m ${secs}s behind`;
+            } else if (minutes > 0) {
+                return `${minutes}m ${secs}s behind`;
             } else {
-                return `${Math.floor(seconds / 86400)}d ago`;
+                return `${secs}s behind`;
             }
+        }
+
+        function getDataFreshnessLevel(dataAge) {
+            if (!dataAge) return 'unknown';
+            if (dataAge < 300) return 'fresh';
+            if (dataAge < 3600) return 'stale';
+            if (dataAge < 86400) return 'very-stale';
+            return 'outdated';
+        }
+
+        function updateDataFreshnessSummary(servicesWithTimestamps) {
+            const freshnessList = document.getElementById('freshnessList');
+            const freshnessSummary = document.getElementById('dataFreshnessSummary');
+            
+            if (servicesWithTimestamps.length === 0) {
+                freshnessSummary.style.display = 'none';
+                return;
+            }
+            
+            // Sort by data age (oldest first)
+            servicesWithTimestamps.sort((a, b) => (b.dataAge || 0) - (a.dataAge || 0));
+            
+            freshnessList.innerHTML = servicesWithTimestamps.map(service => {
+                const freshnessLevel = getDataFreshnessLevel(service.dataAge);
+                const ageText = formatDataAge(service.dataAge);
+                const timestampText = service.timestamp ? 
+                    new Date(service.timestamp * 1000).toLocaleString() : 'Unknown';
+                const currentTime = new Date().toLocaleString();
+                const timeDiffSeconds = Math.floor(Date.now() / 1000) - service.timestamp;
+                
+                return `
+                    <div class="freshness-item ${freshnessLevel}">
+                        <div class="freshness-header">
+                            <span class="freshness-service">${service.network} - ${service.service}</span>
+                            <span class="freshness-age ${freshnessLevel}">${ageText}</span>
+                        </div>
+                        <div class="freshness-details">
+                            ${service.endpoint}
+                        </div>
+                        <div class="freshness-timestamp">
+                            Current time: ${currentTime}<br>
+                            Data timestamp: ${timestampText}<br>
+                            Difference: ${timeDiffSeconds} seconds
+                        </div>
+                    </div>
+                `;
+            }).join('');
+            
+            freshnessSummary.style.display = 'block';
         }
 
         async function checkServiceUrls(urls) {
@@ -645,11 +765,13 @@
                 <ul class="endpoints-list" id="endpoints-${networkName}-${serviceName}">
                     ${urls.map(url => `
                         <li class="endpoint-item">
-                            <a href="${url.split(',')[0]}" target="_blank" class="endpoint-url">${url.split(',')[0]}</a>
-                            <div style="display: flex; align-items: center; gap: 8px;">
-                                <span class="data-age" style="font-size: 0.8rem; color: #6b7280;"></span>
-                                <div class="endpoint-status checking"></div>
+                            <div style="flex-grow: 1;">
+                                <a href="${url.split(',')[0]}" target="_blank" class="endpoint-url">${url.split(',')[0]}</a>
+                                <div class="data-age-container" style="margin-top: 4px;">
+                                    <span class="data-age" style="font-size: 0.8rem; color: #6b7280; font-weight: 500;"></span>
+                                </div>
                             </div>
+                            <div class="endpoint-status checking"></div>
                         </li>
                     `).join('')}
                 </ul>
@@ -683,8 +805,16 @@
                     }
                     
                     if (dataAgeElement && endpoint.dataAge) {
-                        dataAgeElement.textContent = formatDataAge(endpoint.dataAge);
-                        dataAgeElement.title = `Data timestamp: ${new Date(endpoint.timestamp * 1000).toLocaleString()}`;
+                        const ageText = formatDataAge(endpoint.dataAge);
+                        const currentTime = Math.floor(Date.now() / 1000);
+                        const timeDiff = currentTime - endpoint.timestamp;
+                        
+                        dataAgeElement.textContent = ageText;
+                        dataAgeElement.title = `Current time: ${new Date().toLocaleString()}\nData timestamp: ${new Date(endpoint.timestamp * 1000).toLocaleString()}\nTime difference: ${timeDiff} seconds`;
+                        dataAgeElement.style.color = '#333';
+                        dataAgeElement.style.fontWeight = '600';
+                    } else if (dataAgeElement) {
+                        dataAgeElement.textContent = '';
                     }
                 }
             });
@@ -716,6 +846,12 @@
                 grid.className = 'services-grid';
                 
                 for (const [serviceName, urls] of Object.entries(services)) {
+                    // Filter out liquidator and redstone services
+                    if (serviceName.toLowerCase().includes('liquidator') || 
+                        serviceName.toLowerCase().includes('redstone')) {
+                        continue;
+                    }
+                    
                     const card = createServiceCard(serviceName, urls, networkName);
                     grid.appendChild(card);
                 }
@@ -737,16 +873,37 @@
             let timeoutServices = 0;
             let blockedServices = 0;
             let staleServices = 0;
+            let servicesWithTimestamps = [];
 
             const networks = config['1'];
             
             for (const [networkName, services] of Object.entries(networks)) {
                 for (const [serviceName, urls] of Object.entries(services)) {
+                    // Filter out liquidator and redstone services
+                    if (serviceName.toLowerCase().includes('liquidator') || 
+                        serviceName.toLowerCase().includes('redstone')) {
+                        continue;
+                    }
+                    
                     totalServices++;
                     
                     try {
                         const result = await checkServiceUrls(urls);
                         updateServiceStatus(networkName, serviceName, result);
+                        
+                        // Collect services with timestamp data
+                        result.endpoints.forEach(endpoint => {
+                            if (endpoint.dataAge && endpoint.timestamp) {
+                                servicesWithTimestamps.push({
+                                    network: networkName,
+                                    service: serviceName,
+                                    endpoint: endpoint.url,
+                                    dataAge: endpoint.dataAge,
+                                    timestamp: endpoint.timestamp,
+                                    status: endpoint.status
+                                });
+                            }
+                        });
                         
                         if (result.online) {
                             if (result.status === 'online') {
@@ -768,6 +925,7 @@
 
             const offlineServices = totalServices - onlineServices - timeoutServices - blockedServices - staleServices;
             updateSummary(onlineServices, offlineServices, totalServices, timeoutServices, blockedServices, staleServices);
+            updateDataFreshnessSummary(servicesWithTimestamps);
             updateLastUpdated();
             
             refreshButton.classList.remove('spinning');

@@ -21,9 +21,11 @@
       "hemibtc": {
          "charts_server": [
             "https://hemibtc-charts-server.fly.dev/health",
-            "https://hemibtc-charts-server.fly.dev/api/sync"
+            "https://hemibtc-charts-server.fly.dev/api/sync,parse"
          ],
-         "third-eye": [ ]
+         "third-eye": [
+            "http://37.60.225.176:9001/metrics,prometheus"
+         ]
       },
       "lisk": {
          "charts_server": [
