@@ -557,8 +557,16 @@
             try {
                 // Extract the actual URL and any operation indicators
                 const urlParts = url.split(',');
-                const actualUrl = urlParts[0];
+                let actualUrl = urlParts[0];
                 const operation = urlParts[1] || '';
+
+                // Check if URL contains an IP address and proxy it if needed
+                const ipRegex = /(?:https?:\/\/)?(\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3})/;
+                if (ipRegex.test(actualUrl)) {
+                    // Remove protocol if present and proxy through testnet.gearbox.foundation
+                    const cleanUrl = actualUrl.replace(/^https?:\/\//, '');
+                    actualUrl = `https://testnet.gearbox.foundation/app_status/proxy?url=${cleanUrl}`;
+                }
 
                 // Try HTTPS first with timeout
                 const response = await Promise.race([

@@ -33,7 +33,7 @@
             "https://lisk-charts-server.fly.dev/api/sync,parse"
          ],
          "third-eye": [
-            "http://144.91.114.166:49000/metrics,prometheus"
+            "http://144.91.114.166:9001/metrics,prometheus"
          ]
       },
       "mainnet": {
