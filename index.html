@@ -141,6 +141,30 @@
             animation: pulse-orange 2s infinite;
         }
 
+        .status-blocked {
+            background: #8b5cf6;
+            box-shadow: 0 0 10px rgba(139, 92, 246, 0.5);
+            animation: pulse-purple 2s infinite;
+        }
+
+        .status-stale {
+            background: #eab308;
+            box-shadow: 0 0 10px rgba(234, 179, 8, 0.5);
+            animation: pulse-yellow-slow 3s infinite;
+        }
+
+        .status-very-stale {
+            background: #f97316;
+            box-shadow: 0 0 10px rgba(249, 115, 22, 0.5);
+            animation: pulse-orange-slow 3s infinite;
+        }
+
+        .status-outdated {
+            background: #dc2626;
+            box-shadow: 0 0 10px rgba(220, 38, 38, 0.5);
+            animation: pulse-red-slow 3s infinite;
+        }
+
         @keyframes pulse-green {
             0%, 100% { opacity: 1; }
             50% { opacity: 0.7; }
@@ -161,6 +185,26 @@
             50% { opacity: 0.6; }
         }
 
+        @keyframes pulse-purple {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.6; }
+        }
+
+        @keyframes pulse-yellow-slow {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.7; }
+        }
+
+        @keyframes pulse-orange-slow {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.6; }
+        }
+
+        @keyframes pulse-red-slow {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+
         .service-card.online {
             border-left-color: #10b981;
         }
@@ -175,6 +219,22 @@
 
         .service-card.timeout {
             border-left-color: #f97316;
+        }
+
+        .service-card.blocked {
+            border-left-color: #8b5cf6;
+        }
+
+        .service-card.stale {
+            border-left-color: #eab308;
+        }
+
+        .service-card.very-stale {
+            border-left-color: #f97316;
+        }
+
+        .service-card.outdated {
+            border-left-color: #dc2626;
         }
 
         .endpoints-list {
@@ -300,6 +360,8 @@
         .stat-online { color: #10b981; }
         .stat-offline { color: #ef4444; }
         .stat-timeout { color: #f97316; }
+        .stat-blocked { color: #8b5cf6; }
+        .stat-stale { color: #eab308; }
         .stat-total { color: #667eea; }
 
         @media (max-width: 768px) {
@@ -343,6 +405,14 @@
                 <div class="stat-item">
                     <div class="stat-number stat-timeout" id="timeoutCount">0</div>
                     <div class="stat-label">Timeout</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-number stat-blocked" id="blockedCount">0</div>
+                    <div class="stat-label">Blocked</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-number stat-stale" id="staleCount">0</div>
+                    <div class="stat-label">Stale Data</div>
                 </div>
                 <div class="stat-item">
                     <div class="stat-number stat-total" id="totalCount">0</div>
@@ -395,19 +465,52 @@
 
         async function checkUrl(url) {
             try {
-                // For CORS issues, we'll use a simple approach
-                // In production, you might want to use a CORS proxy or backend service
+                // Handle mixed content issues by upgrading HTTP to HTTPS when the page is served over HTTPS
+                let targetUrl = url;
+                if (location.protocol === 'https:' && url.startsWith('http:')) {
+                    // Try HTTPS version first for mixed content compatibility
+                    targetUrl = url.replace('http:', 'https:');
+                    
+                    try {
+                        const controller = new AbortController();
+                        const timeoutId = setTimeout(() => controller.abort(), 2000);
+                        
+                        const response = await fetch(targetUrl, {
+                            method: 'GET',
+                            mode: 'cors',
+                            signal: controller.signal
+                        });
+                        
+                        clearTimeout(timeoutId);
+                        
+                        // Try to parse response for timestamp data
+                        const result = await parseResponseData(response, targetUrl);
+                        return result;
+                    } catch (httpsError) {
+                        if (httpsError.name === 'AbortError') {
+                            return { status: 'timeout', online: false };
+                        }
+                        // HTTPS failed, but don't try HTTP due to mixed content - mark as blocked
+                        console.error(`Mixed content blocked for ${url} (HTTPS upgrade failed):`, httpsError);
+                        return { status: 'blocked', online: false };
+                    }
+                }
+                
+                // For HTTPS URLs or when page is served over HTTP
                 const controller = new AbortController();
-                const timeoutId = setTimeout(() => controller.abort(), 2000); // 2 second timeout
+                const timeoutId = setTimeout(() => controller.abort(), 2000);
 
-                const response = await fetch(url, {
+                const response = await fetch(targetUrl, {
                     method: 'GET',
-                    mode: 'no-cors', // This will limit what we can check, but avoids CORS
+                    mode: 'cors',
                     signal: controller.signal
                 });
                 
                 clearTimeout(timeoutId);
-                return { status: 'online', online: true }; // If no error is thrown, consider it online
+                
+                // Try to parse response for timestamp data
+                const result = await parseResponseData(response, targetUrl);
+                return result;
             } catch (error) {
                 if (error.name === 'AbortError') {
                     console.error(`Timeout checking ${url}:`, error);
@@ -419,20 +522,112 @@
             }
         }
 
+        async function parseResponseData(response, url) {
+            const currentTime = Math.floor(Date.now() / 1000);
+            
+            try {
+                const text = await response.text();
+                let timestamp = null;
+                let dataAge = null;
+                
+                // Check if URL has parse or prometheus indicators
+                const urlParams = url.split(',')[1] || '';
+                
+                if (urlParams.includes('parse')) {
+                    // Try to parse JSON response for "parse" endpoints
+                    try {
+                        const data = JSON.parse(text);
+                        if (data.data && data.data.ts) {
+                            timestamp = data.data.ts;
+                        }
+                    } catch (e) {
+                        // Not valid JSON, continue
+                    }
+                } else if (urlParams.includes('prometheus')) {
+                    // Parse prometheus format for timestamp
+                    const match = text.match(/eth_block_number_time\s+([\d.e\+]+)/);
+                    if (match) {
+                        timestamp = parseFloat(match[1]);
+                    }
+                }
+                
+                if (timestamp) {
+                    dataAge = currentTime - timestamp;
+                    
+                    // Determine status based on data freshness
+                    if (dataAge < 300) { // Less than 5 minutes
+                        return { status: 'online', online: true, dataAge, timestamp };
+                    } else if (dataAge < 3600) { // Less than 1 hour
+                        return { status: 'stale', online: true, dataAge, timestamp };
+                    } else if (dataAge < 86400) { // Less than 1 day
+                        return { status: 'very-stale', online: true, dataAge, timestamp };
+                    } else { // More than 1 day
+                        return { status: 'outdated', online: false, dataAge, timestamp };
+                    }
+                }
+                
+                // No timestamp found, just check if response is ok
+                return { status: 'online', online: true };
+            } catch (e) {
+                // If we can't parse the response, but got one, consider it online
+                return { status: 'online', online: true };
+            }
+        }
+
+        function formatDataAge(seconds) {
+            if (!seconds) return '';
+            
+            if (seconds < 60) {
+                return `${Math.floor(seconds)}s ago`;
+            } else if (seconds < 3600) {
+                return `${Math.floor(seconds / 60)}m ago`;
+            } else if (seconds < 86400) {
+                return `${Math.floor(seconds / 3600)}h ago`;
+            } else {
+                return `${Math.floor(seconds / 86400)}d ago`;
+            }
+        }
+
         async function checkServiceUrls(urls) {
             const results = await Promise.all(
                 urls.map(async (url) => {
                     // Remove any additional parameters after comma
                     const cleanUrl = url.split(',')[0];
-                    const result = await checkUrl(cleanUrl);
-                    return { url: cleanUrl, online: result.online, status: result.status };
+                    const result = await checkUrl(url); // Pass full URL with params
+                    return { 
+                        url: cleanUrl, 
+                        online: result.online, 
+                        status: result.status,
+                        dataAge: result.dataAge,
+                        timestamp: result.timestamp
+                    };
                 })
             );
             
             // Service is considered online if at least one URL is reachable
             const serviceOnline = results.some(result => result.online);
             const hasTimeout = results.some(result => result.status === 'timeout');
-            const serviceStatus = serviceOnline ? 'online' : (hasTimeout && !serviceOnline ? 'timeout' : 'offline');
+            const hasBlocked = results.some(result => result.status === 'blocked');
+            const hasStale = results.some(result => result.status === 'stale');
+            const hasVeryStale = results.some(result => result.status === 'very-stale');
+            const hasOutdated = results.some(result => result.status === 'outdated');
+            
+            let serviceStatus = 'offline';
+            if (serviceOnline) {
+                if (hasOutdated) {
+                    serviceStatus = 'outdated';
+                } else if (hasVeryStale) {
+                    serviceStatus = 'very-stale';
+                } else if (hasStale) {
+                    serviceStatus = 'stale';
+                } else {
+                    serviceStatus = 'online';
+                }
+            } else if (hasBlocked && !serviceOnline) {
+                serviceStatus = 'blocked';
+            } else if (hasTimeout && !serviceOnline) {
+                serviceStatus = 'timeout';
+            }
             
             return { online: serviceOnline, status: serviceStatus, endpoints: results };
         }
@@ -451,7 +646,10 @@
                     ${urls.map(url => `
                         <li class="endpoint-item">
                             <a href="${url.split(',')[0]}" target="_blank" class="endpoint-url">${url.split(',')[0]}</a>
-                            <div class="endpoint-status checking"></div>
+                            <div style="display: flex; align-items: center; gap: 8px;">
+                                <span class="data-age" style="font-size: 0.8rem; color: #6b7280;"></span>
+                                <div class="endpoint-status checking"></div>
+                            </div>
                         </li>
                     `).join('')}
                 </ul>
@@ -473,11 +671,21 @@
             statusIndicator.className = `status-indicator status-${statusClass}`;
             
             // Update individual endpoint statuses
-            const endpointItems = endpointsList.querySelectorAll('.endpoint-status');
+            const endpointItems = endpointsList.querySelectorAll('.endpoint-item');
             result.endpoints.forEach((endpoint, index) => {
                 if (endpointItems[index]) {
                     const endpointStatus = endpoint.status || (endpoint.online ? 'online' : 'offline');
-                    endpointItems[index].className = `endpoint-status status-${endpointStatus}`;
+                    const statusElement = endpointItems[index].querySelector('.endpoint-status');
+                    const dataAgeElement = endpointItems[index].querySelector('.data-age');
+                    
+                    if (statusElement) {
+                        statusElement.className = `endpoint-status status-${endpointStatus}`;
+                    }
+                    
+                    if (dataAgeElement && endpoint.dataAge) {
+                        dataAgeElement.textContent = formatDataAge(endpoint.dataAge);
+                        dataAgeElement.title = `Data timestamp: ${new Date(endpoint.timestamp * 1000).toLocaleString()}`;
+                    }
                 }
             });
         }
@@ -527,6 +735,8 @@
             let totalServices = 0;
             let onlineServices = 0;
             let timeoutServices = 0;
+            let blockedServices = 0;
+            let staleServices = 0;
 
             const networks = config['1'];
             
@@ -539,9 +749,15 @@
                         updateServiceStatus(networkName, serviceName, result);
                         
                         if (result.online) {
-                            onlineServices++;
+                            if (result.status === 'online') {
+                                onlineServices++;
+                            } else if (['stale', 'very-stale', 'outdated'].includes(result.status)) {
+                                staleServices++;
+                            }
                         } else if (result.status === 'timeout') {
                             timeoutServices++;
+                        } else if (result.status === 'blocked') {
+                            blockedServices++;
                         }
                     } catch (error) {
                         console.error(`Error checking ${networkName}-${serviceName}:`, error);
@@ -550,17 +766,19 @@
                 }
             }
 
-            const offlineServices = totalServices - onlineServices - timeoutServices;
-            updateSummary(onlineServices, offlineServices, totalServices, timeoutServices);
+            const offlineServices = totalServices - onlineServices - timeoutServices - blockedServices - staleServices;
+            updateSummary(onlineServices, offlineServices, totalServices, timeoutServices, blockedServices, staleServices);
             updateLastUpdated();
             
             refreshButton.classList.remove('spinning');
         }
 
-        function updateSummary(online, offline, total, timeout = 0) {
+        function updateSummary(online, offline, total, timeout = 0, blocked = 0, stale = 0) {
             document.getElementById('onlineCount').textContent = online;
             document.getElementById('offlineCount').textContent = offline;
             document.getElementById('timeoutCount').textContent = timeout;
+            document.getElementById('blockedCount').textContent = blocked;
+            document.getElementById('staleCount').textContent = stale;
             document.getElementById('totalCount').textContent = total;
             document.getElementById('summary').style.display = 'block';
         }
