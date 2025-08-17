@@ -401,7 +401,7 @@
                 const timeoutId = setTimeout(() => controller.abort(), 2000); // 2 second timeout
 
                 const response = await fetch(url, {
-                    method: 'HEAD',
+                    method: 'GET',
                     mode: 'no-cors', // This will limit what we can check, but avoids CORS
                     signal: controller.signal
                 });
@@ -414,28 +414,8 @@
                     return { status: 'timeout', online: false };
                 }
                 
-                // For no-cors mode, we can't really tell the difference between
-                // a successful request and a failed one, so we'll do a simple fetch
-                try {
-                    const controller2 = new AbortController();
-                    const timeoutId2 = setTimeout(() => controller2.abort(), 2000); // 2 second timeout
-                    
-                    const response = await fetch(url, {
-                        method: 'GET',
-                        mode: 'no-cors',
-                        signal: controller2.signal
-                    });
-                    
-                    clearTimeout(timeoutId2);
-                    return { status: 'online', online: true };
-                } catch (e) {
-                    if (e.name === 'AbortError') {
-                        console.error(`Timeout checking ${url}:`, e);
-                        return { status: 'timeout', online: false };
-                    }
-                    console.error(`Error checking ${url}:`, error);
-                    return { status: 'offline', online: false };
-                }
+                console.error(`Error checking ${url}:`, error);
+                return { status: 'offline', online: false };
             }
         }
 
