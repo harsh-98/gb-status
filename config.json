@@ -44,11 +44,14 @@
             "http://144.91.114.166:12500/redstone-primary-prod/1?dataFeeds=weETH_FUNDAMENTAL"
          ],
          "charts_server": [
-            "https://charts-server.fly.dev/health",
-            "https://charts-server.fly.dev/api/sync,parse"
+            "https://mainnet-charts-server.fly.dev/health",
+            "https://mainnet-charts-server.fly.dev/api/sync,parse"
          ],
          "liquidator-v3": [
             "https://liquidator-v3.fly.dev/metrics,prometheus"
+         ],
+         "nginx": [
+            "https://charts-server.fly.dev/health"
          ],
          "opt_redstone_server": [
             "http://37.60.225.176:12501/redstone-primary-prod/1?dataFeeds=weETH_FUNDAMENTAL"
