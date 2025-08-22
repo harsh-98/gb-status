@@ -769,21 +769,10 @@
                 const networksData = data.networks || data;
                 console.log('Networks data keys:', Object.keys(networksData));
                 
-                // Network mapping from JSON file network names to our standardized names
-                const networkMapping = {
-                    'MAINNET': 'mainnet',
-                    'ARBITRUM': 'arbitrum',
-                    'OPTIMISM': 'optimism',
-                    'SONIC': 'sonic',
-                    'BNB': 'bnb',
-                    'LISK': 'lisk',
-                    'HEMIBTC': 'hemibtc',
-                    'HEMI': 'hemibtc'
-                };
-                
-                // Process each network in the JSON data
+                // Process each network in the JSON data dynamically
                 for (const [networkKey, networkArray] of Object.entries(networksData)) {
-                    const mappedName = networkMapping[networkKey.toUpperCase()] || networkKey.toLowerCase();
+                    // Convert network name to lowercase for consistent naming
+                    const mappedName = networkKey.toLowerCase();
                     
                     console.log(`Processing network: ${networkKey} -> ${mappedName}`);
                     console.log(`Network data:`, networkArray);
@@ -792,16 +781,14 @@
                         const addresses = [];
                         
                         networkArray.forEach((item, index) => {
-                            if (typeof item === 'string' && /^0x[a-fA-F0-9]{40}$/.test(item)) {
+                            if (typeof item === 'string') {
                                 // Direct address string
                                 addresses.push(item);
                                 console.log(`Found direct address in ${mappedName}[${index}]:`, item);
                             } else if (typeof item === 'object' && item !== null && item.address) {
                                 // Object with address property
-                                if (/^0x[a-fA-F0-9]{40}$/.test(item.address)) {
-                                    addresses.push(item.address);
-                                    console.log(`Found address object in ${mappedName}[${index}]:`, item.address, item.description || '');
-                                }
+                                addresses.push(item.address);
+                                console.log(`Found address object in ${mappedName}[${index}]:`, item.address, item.description || '');
                             }
                         });
                         
@@ -820,22 +807,6 @@
             } catch (error) {
                 console.error('Error parsing JSON market configurators:', error);
                 console.log('Raw content preview:', content.substring(0, 1000));
-                
-                // Fallback: Try to extract addresses using regex if JSON parsing fails
-                console.log('Attempting regex fallback extraction...');
-                const addressRegex = /"address":\s*"(0x[a-fA-F0-9]{40})"/g;
-                const allAddresses = [];
-                let match;
-                
-                while ((match = addressRegex.exec(content)) !== null) {
-                    allAddresses.push(match[1]);
-                }
-                
-                if (allAddresses.length > 0) {
-                    console.log('Regex fallback found addresses:', allAddresses);
-                    // If we can't parse networks, put all addresses in mainnet as fallback
-                    mcs.mainnet = [...new Set(allAddresses)];
-                }
             }
             
             console.log('=== Final parsed Go Market Configurators ===');

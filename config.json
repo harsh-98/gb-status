@@ -2,6 +2,7 @@
    "1": {
       "arbitrum": {
          "charts_server": [
+            "https://charts-server.fly.dev/health?chainid=42161",
             "https://arbitrum-charts-server.fly.dev/health",
             "https://arbitrum-charts-server.fly.dev/api/sync,parse"
          ],
@@ -11,16 +12,25 @@
       },
       "bnb": {
          "charts_server": [
-            "https://bnb-charts-server.fly.dev/health",
+            "https://charts-server.fly.dev/health?chainid=56",
             "https://bnb-charts-server.fly.dev/api/sync,parse"
          ],
          "third-eye": [
             "http://144.91.114.166:49000/metrics,prometheus"
          ]
       },
+      "etherlink": {
+         "charts_server": [
+            "https://charts-server.fly.dev/health?chainid=42793",
+            "https://etherlink-charts-server.fly.dev/api/sync,parse"
+         ],
+         "third-eye": [
+            "https://144.91.114.166:59000/metrics,prometheus"
+         ]
+      },
       "hemibtc": {
          "charts_server": [
-            "https://hemibtc-charts-server.fly.dev/health",
+            "https://charts-server.fly.dev/health?chainid=43211",
             "https://hemibtc-charts-server.fly.dev/api/sync,parse"
          ],
          "third-eye": [
@@ -29,7 +39,7 @@
       },
       "lisk": {
          "charts_server": [
-            "https://lisk-charts-server.fly.dev/health",
+            "https://charts-server.fly.dev/health?chainid=1135",
             "https://lisk-charts-server.fly.dev/api/sync,parse"
          ],
          "third-eye": [
@@ -44,7 +54,7 @@
             "http://144.91.114.166:12500/redstone-primary-prod/1?dataFeeds=weETH_FUNDAMENTAL"
          ],
          "charts_server": [
-            "https://mainnet-charts-server.fly.dev/health",
+            "https://charts-server.fly.dev/health?chainid=1",
             "https://mainnet-charts-server.fly.dev/api/sync,parse"
          ],
          "liquidator-v3": [
@@ -65,7 +75,7 @@
       },
       "opitmism": {
          "charts_server": [
-            "https://optimism-charts-server.fly.dev/health",
+            "https://charts-server.fly.dev/health?chainid=10",
             "https://optimism-charts-server.fly.dev/api/sync,parse"
          ],
          "third-eye": [
@@ -74,7 +84,7 @@
       },
       "sonic": {
          "charts_server": [
-            "https://sonic-charts-server.fly.dev/health",
+            "https://charts-server.fly.dev/health?chainid=146",
             "https://sonic-charts-server.fly.dev/api/sync,parse"
          ],
          "third-eye": [
