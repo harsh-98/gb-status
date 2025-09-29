@@ -82,6 +82,15 @@
             "https://optimism.gearbox.foundation/metrics,prometheus"
          ]
       },
+      "plasma": {
+         "charts_server": [
+            "https://charts-server.fly.dev/health?chainid=9745",
+            "https://plasma-charts-server.fly.dev/api/sync,parse"
+         ],
+         "third-eye": [
+            "http://37.60.225.176:19001/metrics,prometheus"
+         ]
+      },
       "sonic": {
          "charts_server": [
             "https://charts-server.fly.dev/health?chainid=146",
