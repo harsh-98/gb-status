@@ -624,7 +624,10 @@
             optimism: '🔴',
             sonic: '🟡',
             bnb: '🟠',
-            lisk: '🟢'
+            lisk: '🟢',
+            hemibtc: '🟣',
+            plasma: '🟤',
+            etherlink: '⚫'
         };
 
         // Dynamic market configurators storage
@@ -680,14 +683,15 @@
                 'Sonic': 'sonic',
                 'BNB': 'bnb',
                 'Lisk': 'lisk',
-                'Hemi': 'hemibtc'
+                'Hemi': 'hemibtc',
+                'Plasma': 'plasma',
+                'Etherlink': 'etherlink',
             };
             
             for (const [tsNetworkName, networkName] of Object.entries(networkMapping)) {
                 // Regex to find network block and extract defaultMarketConfigurators
                 const networkRegex = new RegExp(`${tsNetworkName}:[\\s\\S]*?defaultMarketConfigurators:\\s*\\{([\\s\\S]*?)\\}`, 'g');
                 const networkMatch = content.match(networkRegex);
-                
                 if (networkMatch && networkMatch[0]) {
                     const networkBlock = networkMatch[0];
                     
@@ -708,7 +712,6 @@
                     }
                 }
             }
-            
             return mcs;
         }
 
@@ -1129,7 +1132,9 @@
                 sonic: 'https://explorer.soniclabs.com/address/',
                 bnb: 'https://bscscan.com/address/',
                 lisk: 'https://blockscout.lisk.com/address/',
-                hemibtc: 'https://explorer.hemi.xyz/address/'
+                hemibtc: 'https://explorer.hemi.xyz/address/',
+                plasma: 'https://plasmascan.to//address/',
+                etherlink: 'https://explorer.etherlink.com/address/'
             };
 
             const explorerUrl = explorerUrls[networkName] || explorerUrls.mainnet;
