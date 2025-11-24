@@ -25,7 +25,7 @@
             "https://etherlink-charts-server.fly.dev/api/sync,parse"
          ],
          "third-eye": [
-            "https://144.91.114.166:59000/metrics,prometheus"
+            "http://144.91.114.166:59000/metrics,prometheus"
          ]
       },
       "hemibtc": {
@@ -71,6 +71,15 @@
          ],
          "third-eye": [
             "https://testnet.gearbox.foundation/mainnet/metrics,prometheus"
+         ]
+      },
+      "monad": {
+         "charts_server": [
+            "https://charts-server.fly.dev/health?chainid=143",
+            "https://monad-charts-server.fly.dev/api/sync,parse"
+         ],
+         "third-eye": [
+            "http://37.60.225.176:29001/metrics,prometheus"
          ]
       },
       "opitmism": {
