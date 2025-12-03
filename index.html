@@ -638,7 +638,7 @@
         // Function to fetch and parse market configurators from GitHub JSON file
         async function fetchMarketConfigurators() {
             try {
-                const response = await fetch('https://raw.githubusercontent.com/Gearbox-protocol/sdk-go/v310/configs/mc.jsonnet');
+                const response = await fetch('https://raw.githubusercontent.com/Gearbox-protocol/sdk-go/v310/configs/mc.json');
                 if (!response.ok) {
                     throw new Error(`HTTP error! status: ${response.status}`);
                 }
@@ -815,7 +815,6 @@
             console.log('=== Final parsed Go Market Configurators ===');
             console.log('Networks found:', Object.keys(mcs));
             console.log('Total addresses:', Object.values(mcs).reduce((sum, addrs) => sum + addrs.length, 0));
-            console.log('Final result:', JSON.stringify(mcs, null, 2));
             
             return mcs;
         }
