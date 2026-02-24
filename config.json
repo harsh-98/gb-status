@@ -7,7 +7,7 @@
             "https://arbitrum-charts-server.fly.dev/api/sync,parse"
          ],
          "third-eye": [
-            "http://144.91.114.166:19000/metrics,prometheus"
+            "http://37.60.225.176:30647/arbitrum/metrics,prometheus"
          ]
       },
       "bnb": {
@@ -47,9 +47,6 @@
          ]
       },
       "mainnet": {
-         "apy-server": [
-            "https://apy-server.fly.dev/api/health"
-         ],
          "arb_redstone_server": [
             "http://144.91.114.166:12500/redstone-primary-prod/1?dataFeeds=weETH_FUNDAMENTAL"
          ],
@@ -70,7 +67,7 @@
             "https://testnet.gearbox.foundation/redstone/redstone-primary-prod/1?dataFeeds=weETH_FUNDAMENTAL"
          ],
          "third-eye": [
-            "https://testnet.gearbox.foundation/mainnet/metrics,prometheus"
+            "http://37.60.225.176:30647/mainnet/metrics,prometheus"
          ]
       },
       "monad": {
@@ -88,7 +85,7 @@
             "https://optimism-charts-server.fly.dev/api/sync,parse"
          ],
          "third-eye": [
-            "https://optimism.gearbox.foundation/metrics,prometheus"
+            "http://37.60.225.176:30647/optimism/metrics,prometheus"
          ]
       },
       "plasma": {
@@ -118,6 +115,5 @@
             "http://144.91.114.166:39000/metrics,prometheus"
          ]
       }
-   },
-   "7878": { }
+   }
 }
