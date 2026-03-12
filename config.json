@@ -7,7 +7,7 @@
             "https://arbitrum-charts-server.fly.dev/api/sync,parse"
          ],
          "third-eye": [
-            "http://37.60.225.176:30647/arbitrum/metrics,prometheus"
+            "http://144.91.114.166:19000/metrics,prometheus"
          ]
       },
       "bnb": {
@@ -67,7 +67,7 @@
             "https://testnet.gearbox.foundation/redstone/redstone-primary-prod/1?dataFeeds=weETH_FUNDAMENTAL"
          ],
          "third-eye": [
-            "http://37.60.225.176:30647/mainnet/metrics,prometheus"
+            "https://testnet.gearbox.foundation/mainnet/metrics,prometheus"
          ]
       },
       "monad": {
@@ -85,7 +85,7 @@
             "https://optimism-charts-server.fly.dev/api/sync,parse"
          ],
          "third-eye": [
-            "http://37.60.225.176:30647/optimism/metrics,prometheus"
+            "https://optimism.gearbox.foundation/metrics,prometheus"
          ]
       },
       "plasma": {
